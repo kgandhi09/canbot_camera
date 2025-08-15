@@ -51,7 +51,6 @@ static esp_err_t init_camera(void) {
   }
   return ESP_OK;
 }
-
 // Helper: write uint32_t in little-endian
 static void write_uint32_le(uint8_t *buf, uint32_t value) {
   buf[0] = (uint8_t)(value & 0xFF);
@@ -89,7 +88,7 @@ void udp_stream_task(void *pvParameters) {
     int sent = sendto(sock, size_buf, sizeof(size_buf), 0,
                       (struct sockaddr *)&dest_addr, sizeof(dest_addr));
     if (sent < 0) {
-      ESP_LOGE(TAG, "Error sending frame size: errno %d", errno);
+      ESP_LOGE(TAG, "error sending frame size: errno %d", errno);
       esp_camera_fb_return(fb);
       continue;
     }
@@ -123,6 +122,7 @@ void udp_stream_task(void *pvParameters) {
   close(sock);
   vTaskDelete(NULL);
 }
+
 void app_main() {
   esp_err_t err;
 
