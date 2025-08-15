@@ -39,9 +39,9 @@ static esp_err_t init_camera(void) {
       .ledc_channel = LEDC_CHANNEL_0,
 
       .pixel_format = PIXFORMAT_JPEG,
-      .frame_size = FRAMESIZE_128X128,
+      .frame_size = FRAMESIZE_QVGA,
 
-      .jpeg_quality = 10,
+      .jpeg_quality = 12,
       .fb_count = 1,
       .grab_mode = CAMERA_GRAB_WHEN_EMPTY}; // CAMERA_GRAB_LATEST. Sets when
                                             // buffers should be filled
