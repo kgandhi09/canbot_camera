@@ -1,40 +1,42 @@
-menu "Application Configuration"
+menu "CANBOT CAMERA Config"
 
-	menu "WiFi Setting"
+config WIFI_SSID
+    string "WiFi SSID"
+    default "NETGEAR_EXT"
+    help
+      Set the WiFi SSID for the CANBOT to connect to.
 
-		config ESPCAM_WIFI_SSID
-			string "WiFi SSID"
-			default "myssid"
-			help
-				SSID (network name) to connect to.
+config WIFI_PASSWORD
+    string "WiFi Password"
+    default ""
+    help
+      Set the WiFi password for the CANBOT to connect to the specified SSID.
 
-		config ESPCAM_WIFI_PASSWORD
-			string "WiFi Password"
-			default "mypassword"
-			help
-				WiFi password (WPA or WPA2) to connect to.
+config UDP_SERVER_IP
+    string "UDP Server IP"
+    default "192.168.1.100"
+    help
+      Set the IP address of the UDP server that the CANBOT will communicate with.
 
-		config ESPCAM_MAXIMUM_RETRY
-			int "Maximum retry"
-			default 5
-			help
-				Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
-	endmenu
+config UDP_SERVER_PORT
+    int "UDP Server Port"
+    default 12345
+    help
+      Set the port number of the UDP server that the CANBOT will communicate with.
 
-	choice BOARD
-		bool "Select Board"
-		default BOARD_ESP32CAM_AITHINKER
-		help
-			Select Board Type.
-
-		config BOARD_WROVER_KIT
-			bool "Freenove ESP32-WROVER CAM Board"
-		config BOARD_CAMERA_MODEL_ESP_EYE
-			bool "Espressif ESP-EYE"
-		config BOARD_ESP32CAM_AITHINKER
-			bool "AiThinker ESP32-CAM"
-		config BOARD_CAMERA_MODEL_TTGO_T_JOURNAL
-			bool "TTGO T-Journal ESP32 Camera"
-	endchoice
-
+config NETIF_IP
+    string "Network Interface IP"
+    default "192.168.1.2"
+    help
+      Set the IP address for the CANBOT's network interface.
+config NETIF_NETMASK
+    string "Network Interface Netmask"
+    default "255.255.255.0"
+    help
+      Set the netmask for the CANBOT's network interface.
+config NETIF_GATEWAY
+    string "Network Interface Gateway"
+    default "192.168.1.1"
+    help
+      Set the gateway for the CANBOT's network interface.
 endmenu

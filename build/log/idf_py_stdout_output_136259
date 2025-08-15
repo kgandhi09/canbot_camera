@@ -1,0 +1,7 @@
+[1/4] cd /home/gandhi/rimtex_robotics/firmware/canbot_camera/build/esp-idf/esptool_py && /home/gandhi/.espressif/python_env/idf5.4_py3.12_env/bin/python /home/gandhi/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /home/gandhi/rimtex_robotics/firmware/canbot_camera/build/partition_table/partition-table.bin /home/gandhi/rimtex_robotics/firmware/canbot_camera/build/canbot_camera.bin
+canbot_camera.bin binary size 0xef110 bytes. Smallest app partition is 0x100000 bytes. 0x10ef0 bytes (7%) free.
+[2/4] Performing build step for 'bootloader'
+[1/1] cd /home/gandhi/rimtex_robotics/firmware/canbot_camera/build/bootloader/esp-idf/esptool_py && /home/gandhi/.espressif/python_env/idf5.4_py3.12_env/bin/python /home/gandhi/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /home/gandhi/rimtex_robotics/firmware/canbot_camera/build/bootloader/bootloader.bin
+Bootloader binary size 0x6570 bytes. 0xa90 bytes (9%) free.
+[3/4] No install step for 'bootloader'
+[4/4] Completed 'bootloader'
