@@ -1,7 +1,7 @@
 {
     "version":            "1.2",
     "project_name":       "canbot_camera",
-    "project_version":    "4cb624c-dirty",
+    "project_version":    "e7a1576-dirty",
     "project_path":       "/home/gandhi/rimtex_robotics/firmware/canbot_camera",
     "idf_path":           "/home/gandhi/esp/esp-idf",
     "build_dir":          "/home/gandhi/rimtex_robotics/firmware/canbot_camera/build",

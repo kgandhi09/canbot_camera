@@ -29,6 +29,10 @@ extern int wifi_connect_status;
 #define NETIF_GATEWAY CONFIG_NETIF_GATEWAY
 #define NETIF_NETMASK CONFIG_NETIF_NETMASK
 
+#define UDP_SERVER_IP CONFIG_UDP_SERVER_IP
+#define UDP_SERVER_PORT CONFIG_UDP_SERVER_PORT
+#define UDP_CHUNK_SIZE 1460 // Maximum UDP payload size
+
 void connect_wifi(void);
 
 #endif

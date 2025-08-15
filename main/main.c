@@ -12,13 +12,6 @@
 
 static const char *TAG = "Camera Capture UDP Client";
 
-#define PART_BOUNDARY "123456789000000000000987654321"
-static const char *_STREAM_CONTENT_TYPE =
-    "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
-static const char *_STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
-static const char *_STREAM_PART =
-    "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
-
 #define CONFIG_XCLK_FREQ 20000000
 
 static esp_err_t init_camera(void) {
@@ -59,88 +52,77 @@ static esp_err_t init_camera(void) {
   return ESP_OK;
 }
 
-esp_err_t jpg_stream_httpd_handler(httpd_req_t *req) {
-  camera_fb_t *fb = NULL;
-  esp_err_t res = ESP_OK;
-  size_t _jpg_buf_len;
-  uint8_t *_jpg_buf;
-  char *part_buf[64];
-  static int64_t last_frame = 0;
-  if (!last_frame) {
-    last_frame = esp_timer_get_time();
-  }
+// Helper: write uint32_t in little-endian
+static void write_uint32_le(uint8_t *buf, uint32_t value) {
+  buf[0] = (uint8_t)(value & 0xFF);
+  buf[1] = (uint8_t)((value >> 8) & 0xFF);
+  buf[2] = (uint8_t)((value >> 16) & 0xFF);
+  buf[3] = (uint8_t)((value >> 24) & 0xFF);
+}
 
-  res = httpd_resp_set_type(req, _STREAM_CONTENT_TYPE);
-  if (res != ESP_OK) {
-    return res;
-  }
+void udp_stream_task(void *pvParameters) {
+  struct sockaddr_in dest_addr;
+  dest_addr.sin_addr.s_addr = inet_addr(UDP_SERVER_IP);
+  dest_addr.sin_family = AF_INET;
+  dest_addr.sin_port = htons(UDP_SERVER_PORT);
 
-  while (true) {
-    fb = esp_camera_fb_get();
+  int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+  if (sock < 0) {
+    ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
+    vTaskDelete(NULL);
+    return;
+  }
+  ESP_LOGI(TAG, "UDP socket created, sending to %s:%d", UDP_SERVER_IP,
+           UDP_SERVER_PORT);
+
+  while (1) {
+    camera_fb_t *fb = esp_camera_fb_get();
     if (!fb) {
       ESP_LOGE(TAG, "Camera capture failed");
-      res = ESP_FAIL;
-      break;
+      continue;
     }
-    if (fb->format != PIXFORMAT_JPEG) {
-      bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
-      if (!jpeg_converted) {
-        ESP_LOGE(TAG, "JPEG compression failed");
-        esp_camera_fb_return(fb);
-        res = ESP_FAIL;
+
+    // Send 4-byte frame length first
+    uint8_t size_buf[4];
+    write_uint32_le(size_buf, fb->len);
+
+    int sent = sendto(sock, size_buf, sizeof(size_buf), 0,
+                      (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+    if (sent < 0) {
+      ESP_LOGE(TAG, "Error sending frame size: errno %d", errno);
+      esp_camera_fb_return(fb);
+      continue;
+    }
+
+    // Send JPEG data in chunks
+    size_t remaining = fb->len;
+    uint8_t *buf_ptr = fb->buf;
+
+    while (remaining > 0) {
+      size_t chunk_size =
+          remaining > UDP_CHUNK_SIZE ? UDP_CHUNK_SIZE : remaining;
+
+      sent = sendto(sock, buf_ptr, chunk_size, 0, (struct sockaddr *)&dest_addr,
+                    sizeof(dest_addr));
+      if (sent < 0) {
+        ESP_LOGE(TAG, "Error sending chunk: errno %d", errno);
+        break;
       }
-    } else {
-      _jpg_buf_len = fb->len;
-      _jpg_buf = fb->buf;
+
+      buf_ptr += chunk_size;
+      remaining -= chunk_size;
     }
 
-    if (res == ESP_OK) {
-      res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY,
-                                  strlen(_STREAM_BOUNDARY));
-    }
-    if (res == ESP_OK) {
-      size_t hlen = snprintf((char *)part_buf, 64, _STREAM_PART, _jpg_buf_len);
+    ESP_LOGI(TAG, "Sent frame: %u bytes", fb->len);
 
-      res = httpd_resp_send_chunk(req, (const char *)part_buf, hlen);
-    }
-    if (res == ESP_OK) {
-      res = httpd_resp_send_chunk(req, (const char *)_jpg_buf, _jpg_buf_len);
-    }
-    if (fb->format != PIXFORMAT_JPEG) {
-      free(_jpg_buf);
-    }
     esp_camera_fb_return(fb);
-    if (res != ESP_OK) {
-      break;
-    }
-    int64_t fr_end = esp_timer_get_time();
-    int64_t frame_time = fr_end - last_frame;
-    last_frame = fr_end;
-    frame_time /= 1000;
-    ESP_LOGI(TAG, "MJPG: %luKB %lums (%.1ffps)",
-             (uint32_t)(_jpg_buf_len / 1024), (uint32_t)frame_time,
-             1000.0 / (uint32_t)frame_time);
+
+    vTaskDelay(pdMS_TO_TICKS(30)); // ~33 FPS limit
   }
 
-  last_frame = 0;
-  return res;
+  close(sock);
+  vTaskDelete(NULL);
 }
-
-httpd_uri_t uri_get = {.uri = "/",
-                       .method = HTTP_GET,
-                       .handler = jpg_stream_httpd_handler,
-                       .user_ctx = NULL};
-httpd_handle_t setup_server(void) {
-  httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  httpd_handle_t stream_httpd = NULL;
-
-  if (httpd_start(&stream_httpd, &config) == ESP_OK) {
-    httpd_register_uri_handler(stream_httpd, &uri_get);
-  }
-
-  return stream_httpd;
-}
-
 void app_main() {
   esp_err_t err;
 
@@ -160,8 +142,9 @@ void app_main() {
       printf("err: %s\n", esp_err_to_name(err));
       return;
     }
-    setup_server();
-    ESP_LOGI(TAG, "ESP32 CAM Web Server is up and running\n");
+    xTaskCreatePinnedToCore(udp_stream_task, "udp_stream_task", 4096, NULL, 5,
+                            NULL,
+                            tskNO_AFFINITY); // Create UDP stream task
   } else
     ESP_LOGI(
         TAG,
